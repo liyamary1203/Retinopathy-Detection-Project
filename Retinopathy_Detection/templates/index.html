@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetinaCheck AI | Diabetic Retinopathy Detection</title>
+    <style>
+        :root {
+            --primary: #8b5cf6;
+            --secondary: #ec4899;
+            --bg-dark: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --text-light: #f8fafc;
+            --dr-color: #ef4444;
+            --healthy-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.15) 0px, transparent 50%);
+            color: var(--text-light);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 560px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 48px 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+        }
+
+        p.subtitle {
+            font-size: 1.05rem;
+            color: #94a3b8;
+            margin-bottom: 32px;
+            font-weight: 400;
+        }
+
+        .upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            padding: 60px 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            margin-bottom: 24px;
+            background: rgba(255, 255, 255, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area:hover,
+        .upload-area.dragover {
+            border-color: rgba(139, 92, 246, 0.5);
+            background: rgba(139, 92, 246, 0.05);
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: inline-block;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-area:hover .upload-icon {
+            transform: translateY(-5px);
+        }
+
+        .upload-text {
+            display: block;
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 8px;
+        }
+
+        .upload-subtext {
+            display: block;
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .preview-container {
+            display: none;
+            margin-bottom: 24px;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        #image-preview {
+            width: 100%;
+            height: auto;
+            max-height: 350px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .change-image {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: background 0.2s;
+        }
+
+        .change-image:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 14px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.39);
+            display: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn:disabled {
+            background: #334155;
+            color: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Loader */
+        .loader-container {
+            display: none;
+            margin: 30px 0;
+        }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(139, 92, 246, 0.2);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        .loader-text {
+            margin-top: 16px;
+            color: #a8b2d1;
+            font-weight: 500;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Results */
+        .result-container {
+            display: none;
+            margin-top: 24px;
+            padding: 30px 24px;
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-status {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+
+        .result-status.unhealthy {
+            color: var(--dr-color);
+        }
+
+        .result-status.healthy {
+            color: var(--healthy-color);
+        }
+
+        .result-details {
+            font-size: 1.15rem;
+            color: #cbd5e1;
+            margin-bottom: 16px;
+            font-weight: 500;
+        }
+
+        .result-raw {
+            display: inline-block;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #94a3b8;
+            font-family: monospace;
+        }
+
+        .reset-btn {
+            margin-top: 24px;
+            background: transparent;
+            color: #94a3b8;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .reset-btn:hover {
+            color: white;
+            border-color: rgba(255, 255, 255, 0.5);
+            background: rgba(255, 255, 255, 0.05);
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>Retina Check</h1>
+        <p class="subtitle">Instant Diabetic Retinopathy Analysis</p>
+
+        <form id="upload-form">
+            <div class="upload-area" id="drop-zone">
+                <div class="upload-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="48" height="48" style="color: #a78bfa;">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <span class="upload-text">Upload retina scan</span>
+                <span class="upload-subtext">Drag & drop or click to browse</span>
+                <input type="file" id="file-input" accept="image/*" />
+            </div>
+
+            <div class="preview-container" id="preview-container">
+                <img id="image-preview" src="" alt="Image Preview" />
+                <button type="button" class="change-image" id="change-image-btn">Change Image</button>
+            </div>
+
+            <button type="submit" class="btn" id="analyze-btn">Analyze Scan</button>
+
+            <div class="loader-container" id="loader-container">
+                <div class="loader"></div>
+                <div class="loader-text">Analyzing retina patterns...</div>
+            </div>
+        </form>
+
+        <div class="result-container" id="result-container">
+            <div class="result-status" id="result-status"></div>
+            <div class="result-details" id="result-details"></div>
+            <div class="result-raw" id="result-raw"></div>
+            <br>
+            <button class="reset-btn" id="reset-btn">Analyze New Scan</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const previewContainer = document.getElementById('preview-container');
+            const imagePreview = document.getElementById('image-preview');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const form = document.getElementById('upload-form');
+            const loaderContainer = document.getElementById('loader-container');
+            const resultContainer = document.getElementById('result-container');
+            const resultStatus = document.getElementById('result-status');
+            const resultDetails = document.getElementById('result-details');
+            const resultRaw = document.getElementById('result-raw');
+            const resetBtn = document.getElementById('reset-btn');
+            const changeImgBtn = document.getElementById('change-image-btn');
+
+            let selectedFile = null;
+
+            // Drag events
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                if (dt.files.length) handleFiles(dt.files[0]);
+            });
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            changeImgBtn.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', function () {
+                if (this.files.length) handleFiles(this.files[0]);
+            });
+
+            function handleFiles(file) {
+                if (!file.type.match('image.*')) {
+                    alert('Please select a valid image file.');
+                    return;
+                }
+
+                selectedFile = file;
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onloadend = function () {
+                    imagePreview.src = reader.result;
+                    previewContainer.style.display = 'block';
+                    dropZone.style.display = 'none';
+                    analyzeBtn.style.display = 'block';
+                    resultContainer.style.display = 'none';
+                }
+            }
+
+            // API submission
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!selectedFile) return;
+
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+
+                analyzeBtn.style.display = 'none';
+                loaderContainer.style.display = 'block';
+                resultContainer.style.display = 'none';
+
+                try {
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || 'Prediction failed');
+                    }
+
+                    showResults(data);
+                } catch (error) {
+                    alert('Error analyzing image: ' + error.message);
+                    analyzeBtn.style.display = 'block';
+                } finally {
+                    loaderContainer.style.display = 'none';
+                }
+            });
+
+            function showResults(data) {
+                resultContainer.style.display = 'block';
+                resultStatus.textContent = data.status;
+
+                resultStatus.className = 'result-status';
+                if (data.status.toLowerCase().includes('unhealthy')) {
+                    resultStatus.classList.add('unhealthy');
+                } else {
+                    resultStatus.classList.add('healthy');
+                }
+
+                resultDetails.textContent = data.prediction;
+                resultRaw.textContent = `Model Score: ${data.raw_value.toFixed(4)}`;
+            }
+
+            // Reset
+            resetBtn.addEventListener('click', () => {
+                selectedFile = null;
+                fileInput.value = '';
+                previewContainer.style.display = 'none';
+                resultContainer.style.display = 'none';
+                analyzeBtn.style.display = 'none';
+                dropZone.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+
+</html>
