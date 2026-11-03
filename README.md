@@ -106,8 +106,8 @@ This project was developed collaboratively by a team of four members as part of 
 Team Members:
 
 1. Liya Mary Mathew
-2. Team Member 2
-3. Team Member 3
+2. Irfana Noushad
+3. Aryananada N S
 4. Anliya Anto
 
 Individual contributions should be added according to each member's actual involvement.
